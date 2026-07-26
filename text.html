@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Gateway Integration Lab - .NET 8 & JS</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        code, pre, .font-mono { font-family: 'Fira Code', monospace; }
+        .tab-btn.active {
+            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
+            font-weight: 700;
+        }
+        /* Custom Scrollbar for Code Blocks */
+        pre::-webkit-scrollbar { height: 8px; width: 8px; }
+        pre::-webkit-scrollbar-track { background: #1e293b; }
+        pre::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-500/20">
+                    <i class="fa-solid fa-credit-card text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">معمل تطبيق طرق الربط .NET 8 Payment Lab</h1>
+                    <p class="text-xs text-slate-400">مشروع تطبيقي تفاعلي لاختبار وكتابة كود Hosted Checkout, Embedded, و Direct API</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 space-x-reverse bg-slate-900/60 p-1.5 rounded-lg border border-slate-700 text-xs">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-slate-300 font-mono">.NET 8 Web API Ready</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="bg-slate-800/50 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto text-sm gap-2">
+            <button onclick="switchTab('hosted')" id="tab-hosted" class="tab-btn active px-5 py-3.5 flex items-center gap-2 whitespace-nowrap transition-all">
+                <i class="fa-solid fa-globe text-blue-400"></i>
+                <span>1. Hosted Checkout</span>
+            </button>
+            <button onclick="switchTab('embedded')" id="tab-embedded" class="tab-btn px-5 py-3.5 flex items-center gap-2 whitespace-nowrap text-slate-400 transition-all">
+                <i class="fa-solid fa-window-restore text-purple-400"></i>
+                <span>2. Embedded Elements</span>
+            </button>
+            <button onclick="switchTab('direct')" id="tab-direct" class="tab-btn px-5 py-3.5 flex items-center gap-2 whitespace-nowrap text-slate-400 transition-all">
+                <i class="fa-solid fa-bolt text-amber-400"></i>
+                <span>3. Direct API</span>
+            </button>
+            <button onclick="switchTab('backend')" id="tab-backend" class="tab-btn px-5 py-3.5 flex items-center gap-2 whitespace-nowrap text-slate-400 transition-all">
+                <i class="fa-solid fa-code text-emerald-400"></i>
+                <span>4. كامل كود الـ Backend (.NET C#)</span>
+            </button>
+            <button onclick="switchTab('webhook')" id="tab-webhook" class="tab-btn px-5 py-3.5 flex items-center gap-2 whitespace-nowrap text-slate-400 transition-all">
+                <i class="fa-solid fa-shield-halved text-rose-400"></i>
+                <span>5. حماية وتجربة الـ Webhook</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+
+        <!-- ==================== METHOD 1: HOSTED CHECKOUT ==================== -->
+        <div id="view-hosted" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Interactive UI Test -->
+                <div class="lg:col-span-5 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl flex flex-col">
+                    <div class="border-b border-slate-700 pb-4 mb-5 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-blue-400 flex items-center gap-2">
+                                <i class="fa-solid fa-vial"></i> اختبر الواجهة (Frontend Test)
+                            </h2>
+                            <p class="text-xs text-slate-400">توجيه العميل لصفحة دفع خارجية آمنة</p>
+                        </div>
+                        <span class="text-xs font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-md">Hosted Model</span>
+                    </div>
+
+                    <form id="hosted-form" onsubmit="runHostedCheckout(event)" class="space-y-4 flex-grow flex flex-col justify-between">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">اسم المنتج / الخدمة</label>
+                                <input type="text" id="hosted-product" value="اشتراك خطة برو سنوية" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">المبلغ (USD)</label>
+                                    <input type="number" id="hosted-amount" value="120.00" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">البريد الإلكتروني</label>
+                                    <input type="email" value="client@example.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                                </div>
+                            </div>
+                            
+                            <div class="p-3 bg-slate-900/80 border border-slate-700/60 rounded-xl text-xs space-y-2 text-slate-400">
+                                <div class="flex items-center gap-2 text-slate-300 font-semibold">
+                                    <i class="fa-solid fa-circle-info text-blue-400"></i> خطوات الدفع:
+                                </div>
+                                <ol class="list-decimal list-inside space-y-1 pr-1">
+                                    <li>إرسال طلب لـ .NET API لإنشاء جلسة الدفع.</li>
+                                    <li>استلام `Checkout URL` فريد من السيرفر.</li>
+                                    <li>إعادة توجيه العميل فوراً إلى صفحة البوابة.</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>بدء عملية الدفع (Hosted Checkout)</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right Column: Code Explanation -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-brands fa-js text-yellow-400"></i> 1. كود الواجهة الأمامية (Frontend JS)
+                            </h3>
+                            <button onclick="copyCode('hosted-js-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> نسخ</button>
+                        </div>
+                        <pre id="hosted-js-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>async function startHostedCheckout() {
+    // 1. طلب إنشاء الجلسة من سيرفر .NET
+    const response = await fetch('/api/payments/create-hosted-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            productName: "اشتراك خطة برو سنوية",
+            amount: 120.00
+        })
+    });
+
+    const data = await response.json();
+
+    // 2. التوجيه المباشر لرابط صفحة الدفع الخارجية
+    if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+    }
+}</code></pre>
+                    </div>
+
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-server text-emerald-400"></i> 2. كود الـ Backend Controller (.NET 8)
+                            </h3>
+                            <button onclick="copyCode('hosted-cs-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> نسخ</button>
+                        </div>
+                        <pre id="hosted-cs-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>[HttpPost("create-hosted-session")]
+public async Task&lt;IActionResult&gt; CreateHostedSession([FromBody] HostedCheckoutDto dto)
+{
+    var options = new SessionCreateOptions
+    {
+        PaymentMethodTypes = new List&lt;string&gt; { "card" },
+        LineItems = new List&lt;SessionLineItemOptions&gt;
+        {
+            new SessionLineItemOptions
+            {
+                PriceData = new SessionLineItemPriceDataOptions
+                {
+                    UnitAmount = (long)(dto.Amount * 100), // المبلغ بالسنتاً
+                    Currency = "usd",
+                    ProductData = new SessionLineItemPriceDataProductDataOptions { Name = dto.ProductName }
+                },
+                Quantity = 1
+            }
+        },
+        Mode = "payment",
+        SuccessUrl = "https://yourdomain.com/payment-success?session_id={CHECKOUT_SESSION_ID}",
+        CancelUrl = "https://yourdomain.com/payment-cancelled"
+    };
+
+    var service = new SessionService();
+    Session session = await service.CreateAsync(options);
+
+    return Ok(new { redirectUrl = session.Url });
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== METHOD 2: EMBEDDED ELEMENTS ==================== -->
+        <div id="view-embedded" class="tab-content space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Interactive UI Test -->
+                <div class="lg:col-span-5 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl flex flex-col">
+                    <div class="border-b border-slate-700 pb-4 mb-5 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-purple-400 flex items-center gap-2">
+                                <i class="fa-solid fa-credit-card"></i> نموذج العناصر المضمنة (iFrame)
+                            </h2>
+                            <p class="text-xs text-slate-400">الدفع داخل موقعك عبر حقول مشفرة وآمنة</p>
+                        </div>
+                        <span class="text-xs font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2.5 py-1 rounded-md">Embedded Elements</span>
+                    </div>
+
+                    <form id="embedded-form" onsubmit="runEmbeddedCheckout(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">المبلغ المراد خصمه ($)</label>
+                            <input type="number" id="embedded-amount" value="85.50" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500">
+                        </div>
+
+                        <!-- Simulated Stripe/Tap iFrame Container -->
+                        <div class="p-4 bg-slate-950 border border-slate-700 rounded-xl space-y-3">
+                            <div class="flex justify-between items-center text-xs text-slate-400 border-b border-slate-800 pb-2">
+                                <span class="font-semibold text-slate-300"><i class="fa-solid fa-lock text-emerald-400"></i> حقل البطاقة الآمن (MOCK iFRAME)</span>
+                                <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">Hosted by Payment Provider</span>
+                            </div>
+
+                            <div class="space-y-2">
+                                <input type="text" value="4242 •••• •••• 4242" disabled class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs font-mono text-slate-400 cursor-not-allowed">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="text" value="12/28" disabled class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs font-mono text-slate-400 cursor-not-allowed">
+                                    <input type="text" value="•••" disabled class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs font-mono text-slate-400 cursor-not-allowed">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-purple-600/25 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-shield-cat"></i>
+                            <span>إنشاء Intent وتأكيد الدفع</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right Column: Code Explanation -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-brands fa-js text-yellow-400"></i> كود الجانب الأمامي (JS SDK Integration)
+                            </h3>
+                            <button onclick="copyCode('embedded-js-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> نسخ</button>
+                        </div>
+                        <pre id="embedded-js-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>// 1. طلب ClientSecret من .NET API
+const res = await fetch('/api/payments/create-intent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: 85.50 })
+});
+const { clientSecret } = await res.json();
+
+// 2. تضمين حقول الدفع الآمنة في الصفحة
+const stripe = Stripe('YOUR_PUBLISHABLE_KEY');
+const elements = stripe.elements({ clientSecret });
+const paymentElement = elements.create('payment');
+paymentElement.mount('#payment-element-container');
+
+// 3. تأكيد الدفع دون أن تلمس بيانات البطاقة سيرفرك
+const { error } = await stripe.confirmPayment({
+    elements,
+    confirmParams: { return_url: 'https://yourdomain.com/success' }
+});</code></pre>
+                    </div>
+
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-server text-emerald-400"></i> كود السيرفر (.NET 8 PaymentIntent API)
+                            </h3>
+                            <button onclick="copyCode('embedded-cs-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> نسخ</button>
+                        </div>
+                        <pre id="embedded-cs-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>[HttpPost("create-intent")]
+public async Task&lt;IActionResult&gt; CreateIntent([FromBody] CreateIntentDto dto)
+{
+    var options = new PaymentIntentCreateOptions
+    {
+        Amount = (long)(dto.Amount * 100),
+        Currency = "usd",
+        AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions { Enabled = true }
+    };
+
+    var service = new PaymentIntentService();
+    PaymentIntent intent = await service.CreateAsync(options);
+
+    // إرجاع clientSecret للواجهة الأمامية لإكمال عملية التشفير
+    return Ok(new { clientSecret = intent.ClientSecret });
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== METHOD 3: DIRECT API ==================== -->
+        <div id="view-direct" class="tab-content space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Interactive UI Test -->
+                <div class="lg:col-span-5 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl flex flex-col">
+                    <div class="border-b border-slate-700 pb-4 mb-4 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                                <i class="fa-solid fa-bolt"></i> الربط المباشر (Direct API)
+                            </h2>
+                            <p class="text-xs text-slate-400">إرسال بيانات البطاقة مباشرة لسيرفرك</p>
+                        </div>
+                        <span class="text-xs font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-md">PCI-DSS High Risk</span>
+                    </div>
+
+                    <!-- Warning Box -->
+                    <div class="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-start gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 text-sm"></i>
+                        <div>
+                            <strong>تنبيه أمني هام:</strong> هذه الطريقة تتطلب الحصول على شهادة امتثال <b>PCI-DSS Level 1</b> لأن سيرفرك يمر عليه بيانات البطاقة بشكل غير مشفر من البوابة.
+                        </div>
+                    </div>
+
+                    <form id="direct-form" onsubmit="runDirectCheckout(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">رقم البطاقة</label>
+                            <input type="text" id="direct-card" value="4532 0123 4567 8901" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-slate-100 focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">شهر</label>
+                                <input type="number" id="direct-exp-month" value="11" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-slate-100 focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">سنة</label>
+                                <input type="number" id="direct-exp-year" value="2028" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-slate-100 focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">CVV</label>
+                                <input type="text" id="direct-cvv" value="888" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-slate-100 focus:outline-none focus:border-amber-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">المبلغ ($)</label>
+                            <input type="number" id="direct-amount" value="49.99" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
+                        </div>
+
+                        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-amber-600/25 flex items-center justify-center gap-2 mt-2">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>إرسال البيانات المباشرة للخصم</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right Column: Code Explanation -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-server text-emerald-400"></i> كود الـ Backend (.NET Direct Charge API)
+                            </h3>
+                            <button onclick="copyCode('direct-cs-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> نسخ</button>
+                        </div>
+                        <pre id="direct-cs-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>[HttpPost("charge-direct")]
+public async Task&lt;IActionResult&gt; ChargeDirect([FromBody] DirectCardPaymentDto dto)
+{
+    // 1. إنشاء PaymentMethod يدوي من بيانات البطاقة الخام
+    var pmOptions = new PaymentMethodCreateOptions
+    {
+        Type = "card",
+        Card = new PaymentMethodCardOptions
+        {
+            Number = dto.CardNumber,
+            ExpMonth = dto.ExpMonth,
+            ExpYear = dto.ExpYear,
+            Cvc = dto.Cvc
+        }
+    };
+
+    var pmService = new PaymentMethodService();
+    PaymentMethod paymentMethod = await pmService.CreateAsync(pmOptions);
+
+    // 2. إرسال طلب الخصم المباشر
+    var intentOptions = new PaymentIntentCreateOptions
+    {
+        Amount = (long)(dto.Amount * 100),
+        Currency = "usd",
+        PaymentMethod = paymentMethod.Id,
+        Confirm = true,
+        OffSession = true
+    };
+
+    var intentService = new PaymentIntentService();
+    PaymentIntent intent = await intentService.CreateAsync(intentOptions);
+
+    return Ok(new { status = intent.Status, transactionId = intent.Id });
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 4: COMPLETE BACKEND SOURCE CODE ==================== -->
+        <div id="view-backend" class="tab-content space-y-6 hidden">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                            <i class="fa-solid fa-folder-tree"></i> مشروع .NET 8 Web API الكامل
+                        </h2>
+                        <p class="text-xs text-slate-400">يمكنك نسخ الأكواد التالية لإنشاء مشروع متكامل في Visual Studio / VS Code</p>
+                    </div>
+                    <div class="flex gap-2 text-xs">
+                        <button onclick="copyCode('full-backend-code')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg transition-all flex items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> نسخ الملف الكامل
+                        </button>
+                    </div>
+                </div>
+
+                <pre id="full-backend-code" class="bg-slate-950 p-5 rounded-xl text-xs font-mono text-slate-300 overflow-x-auto border border-slate-800 max-h-[500px]"><code>// ==========================================
+// 1. Program.cs
+// ==========================================
+using Stripe;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// ضبط مفتاح API الخاص بـ Stripe عند اقلاع التطبيق
+StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();
+
+
+// ==========================================
+// 2. DTOs / Models (PaymentDtos.cs)
+// ==========================================
+public record HostedCheckoutDto(string ProductName, decimal Amount);
+public record CreateIntentDto(decimal Amount);
+public record DirectCardPaymentDto(string CardNumber, long ExpMonth, long ExpYear, string Cvc, decimal Amount);
+
+
+// ==========================================
+// 3. PaymentsController.cs
+// ==========================================
+using Microsoft.AspNetCore.Mvc;
+using Stripe;
+using Stripe.Checkout;
+
+[ApiController]
+[Route("api/[controller]")]
+public class PaymentsController : ControllerBase
+{
+    // أ) Hosted Checkout Method
+    [HttpPost("create-hosted-session")]
+    public async Task&lt;IActionResult&gt; CreateHostedSession([FromBody] HostedCheckoutDto dto)
+    {
+        var options = new SessionCreateOptions
+        {
+            PaymentMethodTypes = new List&lt;string&gt; { "card" },
+            LineItems = new List&lt;SessionLineItemOptions&gt;
+            {
+                new SessionLineItemOptions
+                {
+                    PriceData = new SessionLineItemPriceDataOptions
+                    {
+                        UnitAmount = (long)(dto.Amount * 100),
+                        Currency = "usd",
+                        ProductData = new SessionLineItemPriceDataProductDataOptions { Name = dto.ProductName }
+                    },
+                    Quantity = 1
+                }
+            },
+            Mode = "payment",
+            SuccessUrl = "https://yourdomain.com/payment-success?session_id={CHECKOUT_SESSION_ID}",
+            CancelUrl = "https://yourdomain.com/payment-cancelled"
+        };
+
+        var service = new SessionService();
+        Session session = await service.CreateAsync(options);
+
+        return Ok(new { redirectUrl = session.Url });
+    }
+
+    // ب) Embedded Elements Method
+    [HttpPost("create-intent")]
+    public async Task&lt;IActionResult&gt; CreateIntent([FromBody] CreateIntentDto dto)
+    {
+        var options = new PaymentIntentCreateOptions
+        {
+            Amount = (long)(dto.Amount * 100),
+            Currency = "usd",
+            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions { Enabled = true }
+        };
+
+        var service = new PaymentIntentService();
+        PaymentIntent intent = await service.CreateAsync(options);
+
+        return Ok(new { clientSecret = intent.ClientSecret });
+    }
+
+    // ج) Direct API Method
+    [HttpPost("charge-direct")]
+    public async Task&lt;IActionResult&gt; ChargeDirect([FromBody] DirectCardPaymentDto dto)
+    {
+        var pmOptions = new PaymentMethodCreateOptions
+        {
+            Type = "card",
+            Card = new PaymentMethodCardOptions
+            {
+                Number = dto.CardNumber,
+                ExpMonth = dto.ExpMonth,
+                ExpYear = dto.ExpYear,
+                Cvc = dto.Cvc
+            }
+        };
+
+        var pmService = new PaymentMethodService();
+        PaymentMethod paymentMethod = await pmService.CreateAsync(pmOptions);
+
+        var intentOptions = new PaymentIntentCreateOptions
+        {
+            Amount = (long)(dto.Amount * 100),
+            Currency = "usd",
+            PaymentMethod = paymentMethod.Id,
+            Confirm = true,
+            OffSession = true
+        };
+
+        var intentService = new PaymentIntentService();
+        PaymentIntent intent = await intentService.CreateAsync(intentOptions);
+
+        return Ok(new { status = intent.Status, transactionId = intent.Id });
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 5: WEBHOOK SECURITY ==================== -->
+        <div id="view-webhook" class="tab-content space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Webhook Security Simulator -->
+                <div class="lg:col-span-6 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-lg font-bold text-rose-400 flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-shield-halved"></i> أداة اختبـار Webhook HMAC Signature
+                    </h2>
+                    <p class="text-xs text-slate-400 mb-4">جرب توليد وفحص الـ HMAC SHA-256 Signature المعتمد لتأمين إشعارات الدفع</p>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Webhook Secret Key</label>
+                            <input type="text" id="wh-secret" value="whsec_test_secret_key_12345" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Payload (JSON Event Body)</label>
+                            <textarea id="wh-payload" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200">{
+  "type": "checkout.session.completed",
+  "data": {
+    "orderId": "ORD-99823",
+    "amount_total": 12000,
+    "payment_status": "paid"
+  }
+}</textarea>
+                        </div>
+
+                        <button onclick="simulateWebhookCheck()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl transition-all shadow-lg shadow-rose-600/25 flex items-center justify-center gap-2 text-sm">
+                            <i class="fa-solid fa-key"></i>
+                            <span>توليد والتحقق من الـ Hash Signature</span>
+                        </button>
+
+                        <div id="wh-result" class="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs font-mono hidden">
+                            <div class="text-slate-400">Calculated HMAC-SHA256:</div>
+                            <div id="wh-computed-hash" class="text-emerald-400 break-all bg-slate-900 p-2 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Backend Webhook Code -->
+                <div class="lg:col-span-6 space-y-4">
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-code"></i> كود الـ Webhook Controller الآمن (.NET 8)
+                            </h3>
+                            <button onclick="copyCode('webhook-cs-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> نسخ</button>
+                        </div>
+                        <pre id="webhook-cs-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>[HttpPost("webhook")]
+public async Task&lt;IActionResult&gt; StripeWebhook()
+{
+    var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+    var stripeSignature = Request.Headers["Stripe-Signature"];
+    var webhookSecret = _config["Stripe:WebhookSecret"];
+
+    try
+    {
+        // 1. التحقق التلقائي من التوقيع والوقت لمنع التزوير Replay Attacks
+        var stripeEvent = EventUtility.ConstructEvent(json, stripeSignature, webhookSecret);
+
+        // 2. معالجة الحدث الموثوق
+        if (stripeEvent.Type == Events.CheckoutSessionCompleted)
+        {
+            var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
+            
+            // تحديث حالة الطلب في قاعدة البيانات إلى مدفوع
+            await UpdateOrderStatus(session.Id, OrderStatus.Paid);
+        }
+
+        return Ok();
+    }
+    catch (StripeException ex)
+    {
+        return BadRequest(new { error = ex.Message });
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Console Terminal -->
+        <div class="mt-8 bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                    <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                    <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                    <span class="text-xs font-mono font-bold text-slate-400 ml-2">API Console & Network Activity Inspector</span>
+                </div>
+                <button onclick="clearConsole()" class="text-xs text-slate-500 hover:text-slate-300"><i class="fa-solid fa-trash-can"></i> مسح السجل</button>
+            </div>
+
+            <div id="api-console" class="font-mono text-xs space-y-2 h-40 overflow-y-auto pr-2 text-slate-300">
+                <div class="text-slate-500">// النظام جاهز لاختبار الطلبات... اختر إحدى الطرق واضغط على زر الدفع للاختبار.</div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800/80 border-t border-slate-700 py-4 text-center text-xs text-slate-400 mt-auto">
+        .NET 8 Payment Gateway Integration Mini-Project & Interactive Lab
+    </footer>
+
+    <!-- Application Script Logic -->
+    <script>
+        function switchTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            // Remove active classes
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'text-blue-400', 'font-bold');
+                btn.classList.add('text-slate-400');
+            });
+
+            // Show selected content
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            // Activate tab button
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            activeBtn.classList.add('active', 'font-bold');
+            activeBtn.classList.remove('text-slate-400');
+        }
+
+        function logConsole(method, url, status, payload, response) {
+            const consoleEl = document.getElementById('api-console');
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = "p-2 rounded bg-slate-900 border border-slate-800 space-y-1 animate-fadeIn";
+            
+            const statusColor = status >= 200 && status < 300 ? 'text-emerald-400' : 'text-rose-400';
+
+            logEntry.innerHTML = `
+                <div class="flex justify-between items-center text-[11px]">
+                    <span class="text-slate-400">[${time}] <strong class="text-blue-400">${method}</strong> ${url}</span>
+                    <span class="font-bold ${statusColor}">HTTP ${status} OK</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[10px]">
+                    <div><span class="text-slate-500">Payload:</span> <code class="text-amber-300">${JSON.stringify(payload)}</code></div>
+                    <div><span class="text-slate-500">Response:</span> <code class="text-purple-300">${JSON.stringify(response)}</code></div>
+                </div>
+            `;
+
+            consoleEl.prepend(logEntry);
+        }
+
+        function clearConsole() {
+            document.getElementById('api-console').innerHTML = '<div class="text-slate-500">// تم مسح السجل...</div>';
+        }
+
+        // Simulating Hosted Checkout Execution
+        function runHostedCheckout(e) {
+            e.preventDefault();
+            const product = document.getElementById('hosted-product').value;
+            const amount = parseFloat(document.getElementById('hosted-amount').value);
+
+            const mockPayload = { productName: product, amount: amount };
+            const mockResponse = {
+                sessionId: "cs_test_a1b2c3d4e5f6g7h8",
+                redirectUrl: "https://checkout.stripe.com/c/pay/cs_test_a1b2c3d4e5f6g7h8"
+            };
+
+            logConsole('POST', 'http://localhost:5090/api/Payment/hosted-checkout/create-session', 200, mockPayload, mockResponse);
+
+            alert(`[محاكاة الـ Frontend]\n\nتم استلام رابط الجلسة بنجاح!\nسوف يتم الآن توجيه المستخدم لـ:\n${mockResponse.redirectUrl}`);
+        }
+
+        // Simulating Embedded Elements Execution
+        function runEmbeddedCheckout(e) {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('embedded-amount').value);
+
+            const mockPayload = { amount: amount };
+            const mockResponse = {
+                clientSecret: "pi_3MtwBwLkdIwHu7ix08a2B_secret_Kx9283719283",
+                status: "requires_payment_method"
+            };
+
+            logConsole('POST', '/api/payments/create-intent', 200, mockPayload, mockResponse);
+
+            setTimeout(() => {
+                logConsole('POST', 'https://api.stripe.com/v1/confirm_payment', 200, { clientSecret: mockResponse.clientSecret }, { status: "succeeded", paymentIntentId: "pi_3MtwBwLkdIwHu7ix08a2B" });
+                alert("تم الخصم بنجاح داخل الـ iFrame دون الخروج من الموقع!");
+            }, 800);
+        }
+
+        // Simulating Direct API Execution
+        function runDirectCheckout(e) {
+            e.preventDefault();
+            const card = document.getElementById('direct-card').value;
+            const month = document.getElementById('direct-exp-month').value;
+            const year = document.getElementById('direct-exp-year').value;
+            const cvv = document.getElementById('direct-cvv').value;
+            const amount = parseFloat(document.getElementById('direct-amount').value);
+
+            const mockPayload = { cardNumber: card.replace(/\s/g, ''), expMonth: month, expYear: year, cvc: cvv, amount: amount };
+            const mockResponse = { status: "succeeded", transactionId: "txn_992103847210" };
+
+            logConsole('POST', '/api/payments/charge-direct', 200, mockPayload, mockResponse);
+            alert("تم إرسال بيانات البطاقة المباشرة وتخصيص العملية بنجاح!");
+        }
+
+        // Webhook HMAC SHA256 Hash Simulation
+        async function simulateWebhookCheck() {
+            const secret = document.getElementById('wh-secret').value;
+            const payload = document.getElementById('wh-payload').value;
+
+            const encoder = new TextEncoder();
+            const keyData = encoder.encode(secret);
+            const messageData = encoder.encode(payload);
+
+            const cryptoKey = await crypto.subtle.importKey(
+                'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+            );
+
+            const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+            const hashArray = Array.from(new Uint8Array(signature));
+            const hexHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            document.getElementById('wh-computed-hash').innerText = `t=${Math.floor(Date.now()/1000)},v1=${hexHash}`;
+            document.getElementById('wh-result').classList.remove('hidden');
+
+            logConsole('POST', '/api/payments/webhook', 200, { "Stripe-Signature": hexHash }, { received: true });
+        }
+
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(codeText);
+            alert("تم نسخ الكود بنجاح!");
+        }
+    </script>
+</body>
+</html>

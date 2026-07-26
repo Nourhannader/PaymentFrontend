@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+<meta charset="UTF-8">
+<title>Payment Success</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+
+
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center">
+
+
+<div class="bg-slate-800 p-10 rounded-2xl text-center shadow-xl">
+
+
+<div class="text-green-400 text-6xl mb-5">
+✓
+</div>
+
+
+<h1 class="text-3xl font-bold mb-4">
+تم الدفع بنجاح
+</h1>
+
+
+<p class="text-slate-400 mb-6">
+Payment completed successfully
+</p>
+
+
+<p id="session"
+class="font-mono text-sm text-blue-400">
+</p>
+
+
+
+<a href="index.html"
+class="inline-block mt-6 bg-blue-600 px-6 py-3 rounded-lg">
+
+العودة إلى PaymentLab
+
+</a>
+
+
+</div>
+
+
+
+<script>
+
+const params =
+new URLSearchParams(
+window.location.search
+);
+
+
+document.getElementById("session")
+.innerText =
+"Session ID: " +
+params.get("session_id");
+
+
+</script>
+
+
+</body>
+
+</html>
