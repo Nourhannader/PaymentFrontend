@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html >
   <head>
     <meta charset="UTF-8" />
 
@@ -73,12 +73,14 @@
         <form id="hosted-form" class="space-y-4">
           <input
             id="hosted-product"
+            class="bg-slate-900 border border-slate-700 rounded-lg p-4"
             value="Premium Subscription"
             placeholder="Product Name"
           />
 
           <input
             id="hosted-amount"
+            class="bg-slate-900 border border-slate-700 rounded-lg p-4"
             type="number"
             value="100"
             placeholder="Amount"
@@ -100,7 +102,7 @@
         </h2>
 
         <form id="embedded-form" class="space-y-4">
-          <input id="embedded-amount" type="number" value="50" />
+          <input id="embedded-amount" class="bg-slate-900 border border-slate-700 rounded-lg p-4" type="number" value="50" />
 
           <button class="bg-purple-600 px-5 py-3 rounded-lg">
             Create Payment Intent
@@ -134,27 +136,14 @@
         </p>
 
         <form id="direct-form" class="space-y-3">
-          <!-- <input
-            id="direct-card"
-            value="4242424242424242"
-            placeholder="Card Number"
-          />
-
-          <div class="grid grid-cols-3 gap-3">
-            <input id="direct-exp-month" value="12" placeholder="Month" />
-
-            <input id="direct-exp-year" value="2028" placeholder="Year" />
-
-            <input id="direct-cvv" value="123" placeholder="CVV" />
-          </div>
-
-          <input id="direct-amount" type="number" value="25" /> -->
-
-          <input id="direct-amount" value="50" placeholder="amount"
+         
+          <input id="direct-amount" value="50" placeholder="amount" type="number"
      class="bg-slate-900 border border-slate-700 rounded-lg p-4">
         </input>
 
-        <div id="card-element"></div>
+        <div id="card-element"
+     class="w-full rounded-xl border border-slate-600 bg-slate-800 px-4 py-3 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/30">
+      </div>
 
           <button class="bg-yellow-600 px-5 py-3 rounded-lg">
             Charge Card
@@ -173,13 +162,13 @@
 
         <textarea id="webhook-json" rows="8">
 
-{
-"type":"checkout.session.completed",
-"amount":100,
-"status":"paid"
-}
+          {
+          "type":"checkout.session.completed",
+          "amount":100,
+          "status":"paid"
+         }
 
-</textarea
+         </textarea
         >
 
         <button

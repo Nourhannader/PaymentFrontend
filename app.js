@@ -101,108 +101,98 @@ async function confirmEmbeddedPayment() {
 // Direct Payment
 // ===============================
 
-// async function startDirectPayment(event) {
-//   event.preventDefault();
-
-//   const body = {
-//     cardNumber: document.getElementById("direct-card").value.replace(/\s/g, ""),
-
-//     expMonth: Number(document.getElementById("direct-exp-month").value),
-
-//     expYear: Number(document.getElementById("direct-exp-year").value),
-
-//     cvc: document.getElementById("direct-cvv").value,
-
-//     amount: Number(document.getElementById("direct-amount").value),
-//   };
-
-//   const data = await apiRequest(CONFIG.ENDPOINTS.DIRECT_PAYMENT, "POST", body);
-
-//   savePayment({
-//     type: "Direct Card",
-
-//     amount: body.amount,
-
-//     status: data.status,
-
-//     id: data.paymentIntentId,
-//   });
-
-//   Swal.fire({
-//     icon: "success",
-//     title: data.message,
-//   });
-// }
-
-
 function initializeDirectPaymentCard() {
+  const cardContainer = document.getElementById("card-element");
 
-    const cardContainer = document.getElementById("card-element");
+  if (!cardContainer) {
+    console.error("card-element not found");
+    return;
+  }
 
-    if (!cardContainer) {
-        console.error("card-element not found");
-        return;
-    }
+  const cardElements = stripe.elements();
 
+  const style = {
+    base: {
+      color: "#e2e8f0",
+      fontFamily: "Inter, Arial, sans-serif",
+      fontSize: "16px",
+      fontWeight: "500",
+      lineHeight: "24px",
 
-    const cardElements = stripe.elements();
+      "::placeholder": {
+        color: "#94a3b8",
+      },
 
+      iconColor: "#3b82f6",
+    },
 
-    cardElement = cardElements.create("card");
+    invalid: {
+      color: "#ef4444",
+      iconColor: "#ef4444",
+    },
 
+    complete: {
+      color: "#22c55e",
+      iconColor: "#22c55e",
+    },
+  };
 
-    cardElement.mount("#card-element");
+  cardElement = cardElements.create("card", {
+    style: style,
+    hidePostalCode: true,
+  });
 
+  cardElement.mount("#card-element");
 
-    console.log("Card Element initialized", cardElement);
+  console.log("Card Element initialized", cardElement);
 }
 
 async function startDirectPayment(event) {
+  event.preventDefault();
 
-    event.preventDefault();
+  const amount = Number(document.getElementById("direct-amount").value);
 
-    const amount = Number(
-        document.getElementById("direct-amount").value
-    );
+  const { paymentMethod, error } = await stripe.createPaymentMethod({
+    type: "card",
 
+    card: cardElement,
+  });
 
-    const {paymentMethod, error} =
-        await stripe.createPaymentMethod({
+  if (error) {
+    Swal.fire({
+      icon: "error",
+      title: error.message,
+    });
 
-            type:"card",
+    return;
+  }
 
-            card:cardElement
+  const body = {
+    paymentMethodId: paymentMethod.id,
 
-        });
+    amount: amount,
+  };
 
+  const data = await apiRequest(CONFIG.ENDPOINTS.DIRECT_PAYMENT, "POST", body);
 
-    if(error){
+  if (data.status === "succeeded") {
+    Swal.fire({
+      icon: "success",
+      title: "Payment Successful",
+    });
 
-        Swal.fire({
-            icon:"error",
-            title:error.message
-        });
-
-        return;
-    }
-
-
-    const body = {
-
-        paymentMethodId: paymentMethod.id,
-
-        amount: amount
-
-    };
-
-
-    const data = await apiRequest(
-        CONFIG.ENDPOINTS.DIRECT_PAYMENT,
-        "POST",
-        body
-    );
-
-
+    savePayment({
+      type: "Direct Payment",
+      amount,
+      status: data.status,
+      id: data.paymentIntentId,
+    });
+  } else {
+    Swal.fire({
+      icon: "error",
+      title: "Payment Failed",
+    });
+  }
 }
 
 // ===============================
