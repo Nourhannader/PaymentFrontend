@@ -1,37 +1,108 @@
-// ===============================
-// PaymentLab Application Logic
-// ===============================
-
-let paymentHistory = JSON.parse(localStorage.getItem("payments")) || [];
+//============================
+//variables
+//============================
+let paymentHistory = JSON.parse(localStorage.getItem("paymentsHistory")) || [];
 const stripe = Stripe(CONFIG.STRIPE_PUBLIC_KEY);
 
 let cardElement;
 let elements;
 
+const appearance = {
+  theme: "night",
+  variables: {
+    colorPrimary: "#3b82f6",
+    colorBackground: "#0f172a",
+    colorText: "#f8fafc",
+    colorDanger: "#ef4444",
+    colorSuccess: "#22c55e",
+    colorTextPlaceholder: "#94a3b8",
+    borderRadius: "12px",
+    fontFamily: "Inter, sans-serif",
+    spacingUnit: "4px"
+  },
+  rules: {
+    ".Input": {
+      border: "1px solid #334155",
+      boxShadow: "none",
+      padding: "14px"
+    },
+    ".Input:focus": {
+      border: "1px solid #3b82f6",
+      boxShadow: "0 0 0 2px rgba(59,130,246,.25)"
+    },
+    ".Tab": {
+      backgroundColor: "#1e293b",
+      border: "1px solid #334155",
+      color: "#e2e8f0"
+    },
+    ".Tab:hover": {
+      backgroundColor: "#334155"
+    },
+    ".Tab--selected": {
+      backgroundColor: "#3b82f6",
+      color: "#ffffff"
+    },
+    ".Label": {
+      color: "#cbd5e1"
+    }
+  }
+};
+
+//=============================
+// switchTab
+//=============================
+
+function switchTab(tabId) {
+  // Hide all tab contents
+  document
+    .querySelectorAll(".tab-content")
+    .forEach((el) => el.classList.add("hidden"));
+  // Remove active classes
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.classList.remove("active", "text-blue-400", "font-bold");
+    btn.classList.add("text-slate-400");
+  });
+
+  // Show selected content
+  document.getElementById(`view-${tabId}`).classList.remove("hidden");
+  // Activate tab button
+  const activeBtn = document.getElementById(`tab-${tabId}`);
+  activeBtn.classList.add("active", "font-bold");
+  activeBtn.classList.remove("text-slate-400");
+}
+
+
 // ===============================
 // Hosted Checkout
 // ===============================
 
-async function startHostedCheckout(event) {
-  event.preventDefault();
-
+async function runHostedCheckout(e) {
+  e.preventDefault();
   const productName = document.getElementById("hosted-product").value;
+  const amount = parseFloat(document.getElementById("hosted-amount").value);
+  let data={productName,amount};
 
-  const amount = Number(document.getElementById("hosted-amount").value);
+  const ResponseData=await apiRequest(CONFIG.ENDPOINTS.HOSTED_CHECKOUT,"Post",data);
+  
+   const response =
+    ResponseData.status >= 200 && ResponseData.status < 300
+        ? {
+            sessionId: ResponseData.sessionId,
+            redirectUrl: ResponseData.redirectUrl
+          }
+        : {
+            error: ResponseData.error
+          };
 
-  const data = await apiRequest(CONFIG.ENDPOINTS.HOSTED_CHECKOUT, "POST", {
-    productName,
-    amount,
-  });
+ savePayment({
+        method: "POST",
+        url: CONFIG.API_BASE_URL + CONFIG.ENDPOINTS.HOSTED_CHECKOUT,
+        status: response.status,
+        payload: data,
+        response: response
+    });
 
-  savePayment({
-    type: "Hosted Checkout",
-    amount,
-    status: "Created",
-    id: data.sessionId,
-  });
-
-  if (data.redirectUrl) {
+ if (data.redirectUrl) {
     window.location.href = data.redirectUrl;
   }
 }
@@ -40,29 +111,43 @@ async function startHostedCheckout(event) {
 // Embedded Checkout
 // Stripe Elements
 // ===============================
+let paymentEmbedded;
+async function runEmbeddedCheckout(e) {
+  e.preventDefault();
+  const amount = parseFloat(document.getElementById("embedded-amount").value);
 
-async function startEmbeddedCheckout(event) {
-  event.preventDefault();
+  const data = { amount: amount };
+  const ResponseData = await apiRequest(CONFIG.ENDPOINTS.PAYMENT_INTENT, "POST", data);
 
-  const amount = Number(document.getElementById("embedded-amount").value);
+  elements=stripe.elements({
+     clientSecret: ResponseData.clientSecret,
+     appearance
+  })
 
-  const data = await apiRequest(CONFIG.ENDPOINTS.PAYMENT_INTENT, "POST", {
-    amount,
-  });
-
-  //stripe = Stripe(CONFIG.STRIPE_PUBLIC_KEY);
-
-  elements = stripe.elements({
-    clientSecret: data.clientSecret,
-  });
-
-  const paymentElement = elements.create("payment");
-
+  const paymentElement=elements.create("payment");
   paymentElement.mount("#payment-element");
 
   document.getElementById("confirm-payment").classList.remove("hidden");
 
   window.currentClientSecret = data.clientSecret;
+  const response=
+       ResponseData.status >= 200 && ResponseData.status < 300
+        ? {
+            clientSecret: ResponseData.clientSecret,
+            PaymentIntentId: ResponseData.PaymentIntentId
+          }
+        : {
+            error: ResponseData.error
+          };
+  
+  paymentEmbedded={
+        method: "POST",
+        url: CONFIG.API_BASE_URL + CONFIG.ENDPOINTS.PAYMENT_INTENT,
+        status: response.status,
+        payload: data,
+        response: response
+    };
+
 }
 
 async function confirmEmbeddedPayment() {
@@ -75,27 +160,35 @@ async function confirmEmbeddedPayment() {
 
     redirect: "if_required",
   });
-
-  if (result.error) {
-    Swal.fire({
-      icon: "error",
-      text: result.error.message,
-    });
-  } else {
-    Swal.fire({
-      icon: "success",
-      title: "Payment Successful",
-    });
-
-    savePayment({
-      type: "Embedded Checkout",
-
-      status: "Succeeded",
-
-      id: result.paymentIntent.id,
-    });
-  }
+ if (result.error) {
+  Swal.fire({
+    icon: "error",
+    title: "Payment Failed",
+    html: `<p class="text-sm">${result.error.message}</p>`,
+    confirmButtonText: "Try Again",
+    confirmButtonColor: "#ef4444",
+    background: "#0f172a",
+    color: "#fff"
+  });
+} else {
+  Swal.fire({
+    icon: "success",
+    title: "Payment Successful",
+    html: `
+      <div class="text-sm text-slate-300">
+        Your transaction has been completed successfully.
+      </div>
+    `,
+    background: "#0f172a",
+    color: "#fff",
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true
+  });
+ }
+  savaPayment(paymentEmbedded)
 }
+
 
 // ===============================
 // Direct Payment
@@ -110,35 +203,37 @@ function initializeDirectPaymentCard() {
   }
 
   const cardElements = stripe.elements();
-
   const style = {
-    base: {
-      color: "#e2e8f0",
-      fontFamily: "Inter, Arial, sans-serif",
-      fontSize: "16px",
-      fontWeight: "500",
-      lineHeight: "24px",
+        base: {
+            color: "#e2e8f0",
+            fontFamily: "'Inter', Arial, sans-serif",
+            fontSize: "16px",
+            fontWeight: "500",
+            lineHeight: "24px",
 
-      "::placeholder": {
-        color: "#94a3b8",
-      },
+            "::placeholder": {
+                color: "#94a3b8"
+            },
 
-      iconColor: "#3b82f6",
-    },
+            iconColor: "#3b82f6",
 
-    invalid: {
-      color: "#ef4444",
-      iconColor: "#ef4444",
-    },
+            ":-webkit-autofill": {
+                color: "#e2e8f0"
+            }
+        },
 
-    complete: {
-      color: "#22c55e",
-      iconColor: "#22c55e",
-    },
-  };
+        invalid: {
+            color: "#ef4444",
+            iconColor: "#ef4444"
+        },
 
+        complete: {
+            color: "#22c55e",
+            iconColor: "#22c55e"
+        }
+    };
   cardElement = cardElements.create("card", {
-    style: style,
+    style,
     hidePostalCode: true,
   });
 
@@ -146,213 +241,195 @@ function initializeDirectPaymentCard() {
 
   console.log("Card Element initialized", cardElement);
 }
-
-async function startDirectPayment(event) {
-  event.preventDefault();
-
-  const amount = Number(document.getElementById("direct-amount").value);
-
+async function runDirectCheckout(e) {
+  e.preventDefault();
+  const amount = parseFloat(document.getElementById("direct-amount").value);
+  const data={amount};
   const { paymentMethod, error } = await stripe.createPaymentMethod({
     type: "card",
-
     card: cardElement,
   });
-
+   
   if (error) {
     Swal.fire({
-      icon: "error",
-      title: error.message,
+    icon: "error",
+    title: "Payment Failed",
+    html: `<p class="text-sm">${error.message}</p>`,
+    confirmButtonText: "Try Again",
+    confirmButtonColor: "#ef4444",
+    background: "#0f172a",
+    color: "#fff"
     });
 
     return;
   }
-
   const body = {
     paymentMethodId: paymentMethod.id,
 
     amount: amount,
   };
-
-  const data = await apiRequest(CONFIG.ENDPOINTS.DIRECT_PAYMENT, "POST", body);
-
-  if (data.status === "succeeded") {
+  const ResponseData = await apiRequest(CONFIG.ENDPOINTS.DIRECT_PAYMENT, "POST", body);
+  const response=
+       ResponseData.status >= 200 && ResponseData.status < 300
+        ? {
+            PaymentIntentId: ResponseData.PaymentIntentId
+          }
+        : {
+            error: ResponseData.error
+          };
+  if (ResponseData.status === 200){
     Swal.fire({
-      icon: "success",
-      title: "Payment Successful",
-    });
-
-    savePayment({
-      type: "Direct Payment",
-      amount,
-      status: data.status,
-      id: data.paymentIntentId,
-    });
-  } else {
-    Swal.fire({
-      icon: "error",
-      title: "Payment Failed",
-    });
-  }
-}
-
-// ===============================
-// Webhook Simulator
-// ===============================
-
-async function testWebhook() {
-  const payload = document.getElementById("webhook-json").value;
-
-  addConsoleLog("POST", "/webhook", 200, payload, {
-    message: "Webhook received",
-  });
-
-  Swal.fire({
     icon: "success",
-    title: "Webhook Verified",
+    title: "Payment Successful",
+    html: `
+      <div class="text-sm text-slate-300">
+        Your transaction has been completed successfully.
+      </div>
+    `,
+    background: "#0f172a",
+    color: "#fff",
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true
+     });
+  }else{
+    Swal.fire({
+    icon: "error",
+    title: "Payment Failed",
+    html: `<p class="text-sm">${ResponseData.error}</p>`,
+    confirmButtonText: "Try Again",
+    confirmButtonColor: "#ef4444",
+    background: "#0f172a",
+    color: "#fff"
+  });
+
+  }
+  
+savePayment({
+        method: "POST",
+        url: CONFIG.API_BASE_URL + CONFIG.ENDPOINTS.DIRECT_PAYMENT,
+        status: response.status,
+        payload: data,
+        response: response
+    });
+  
+}
+
+// Webhook HMAC SHA256 Hash Simulation
+async function simulateWebhookCheck() {
+  const secret = document.getElementById("wh-secret").value;
+  const payload = document.getElementById("wh-payload").value;
+
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(payload);
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
+  const hashArray = Array.from(new Uint8Array(signature));
+  const hexHash = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  document.getElementById("wh-computed-hash").innerText =
+    `t=${Math.floor(Date.now() / 1000)},v1=${hexHash}`;
+  document.getElementById("wh-result").classList.remove("hidden");
+
+  logConsole(
+    "POST",
+    "/api/payments/webhook",
+    200,
+    { "Stripe-Signature": hexHash },
+    { received: true },
+  );
+}
+
+//==========================
+//General
+//==========================
+
+function copyCode(elementId) {
+  const codeText = document.getElementById(elementId).innerText;
+  navigator.clipboard.writeText(codeText);
+  Swal.fire({
+    position: "top-end",
+    icon: "success",
+    title: "Code copied successfully!",
+    showConfirmButton: false,
+    timer: 1500,
   });
 }
 
-// ===============================
-// Payment History
-// ===============================
 
-function savePayment(payment) {
-  payment.date = new Date().toLocaleString();
+function savaPayment(payment) {
+    payment.date = new Date().toLocaleString();
+    paymentHistory.push(payment);
+    localStorage.setItem("paymentsHistory", JSON.stringify(paymentHistory));
 
-  paymentHistory.push(payment);
-
-  localStorage.setItem("payments", JSON.stringify(paymentHistory));
-
-  renderHistory();
+    logConsole();
 }
 
-function renderHistory() {
-  const table = document.getElementById("payment-history");
 
-  if (!table) return;
+function logConsole() {
+  paymentHistory = JSON.parse(localStorage.getItem("paymentsHistory")) || [];
+  const consoleEl = document.getElementById("api-console");
+  const logEntry = document.createElement("div");
+  logEntry.className =
+    "p-2 rounded bg-slate-900 border border-slate-800 space-y-1 animate-fadeIn";
+  [...paymentHistory].reverse().forEach((p) => {
+  const statusColor =
+    p.status >= 200 && p.status < 300 ? "text-emerald-400" : "text-rose-400";
+  
+  const statusCode=
+      p.status >= 200 && p.status < 300 ? "OK" :"BadRequest";
 
-  table.innerHTML = "";
+  logEntry.innerHTML = `
+                <div class="flex justify-between items-center text-[11px]">
+                    <span class="text-slate-400">[${p.date}] <strong class="text-blue-400">${p.method}</strong> ${p.url}</span>
+                    <span class="font-bold ${statusColor}">HTTP ${p.status} ${statusCode}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[10px]">
+                    <div><span class="text-slate-500">Payload:</span> <code class="text-amber-300">${JSON.stringify(p.payload)}</code></div>
+                    <div><span class="text-slate-500">Response:</span> <code class="text-purple-300">${JSON.stringify(p.response)}</code></div>
+                </div>
+            `;
 
-  paymentHistory.reverse().forEach((p) => {
-    table.innerHTML += `
-<tr class="border-b border-slate-700">
-
-<td class="p-3">
-${p.type}
-</td>
-
-
-<td class="p-3">
-${p.amount ?? "-"}
-</td>
-
-
-<td class="p-3 text-green-400">
-${p.status}
-</td>
-
-
-<td class="p-3 text-xs">
-${p.id ?? ""}
-</td>
-
-
-<td class="p-3">
-${p.date}
-</td>
-
-
-</tr>
-
-`;
-  });
-}
-
-// ===============================
-// Console
-// ===============================
-
-function addConsoleLog(method, url, status, request, response) {
-  const consoleBox = document.getElementById("api-console");
-
-  if (!consoleBox) return;
-
-  consoleBox.innerHTML += `
-
-<div class="bg-slate-900 p-3 rounded-lg mb-2">
-
-<div>
-
-<span class="text-blue-400">
-${method}
-</span>
-
-${url}
-
-<span class="text-green-400">
-${status}
-</span>
-
-</div>
-
-
-<div class="text-xs mt-2">
-
-Request:
-
-${JSON.stringify(request)}
-
-<br>
-
-Response:
-
-${JSON.stringify(response)}
-
-</div>
-
-
-</div>
-
-`;
-
-  consoleBox.scrollTop = consoleBox.scrollHeight;
+  consoleEl.prepend(logEntry);
+  })
 }
 
 function clearConsole() {
-  document.getElementById("api-console").innerHTML = "";
+  document.getElementById("api-console").innerHTML =
+    '<div class="text-slate-500">// تم مسح السجل...</div>';
 }
 
-// ===============================
-// Loading
-// ===============================
-
-function showLoading(show) {
-  const loader = document.getElementById("loader");
-
-  if (loader) {
-    loader.classList.toggle("hidden", !show);
-  }
-}
 
 // ===============================
 // Init
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
-  renderHistory();
-  initializeDirectPaymentCard();
+   logConsole()
+  //initializeDirectPaymentCard();
 
   document
     .getElementById("hosted-form")
-    ?.addEventListener("submit", startHostedCheckout);
+    ?.addEventListener("submit", runHostedCheckout);
 
   document
     .getElementById("embedded-form")
-    ?.addEventListener("submit", startEmbeddedCheckout);
+    ?.addEventListener("submit", runEmbeddedCheckout);
 
   document
     .getElementById("direct-form")
-    ?.addEventListener("submit", startDirectPayment);
+    ?.addEventListener("submit", runDirectCheckout);
 
   document
     .getElementById("confirm-payment")

@@ -1,7 +1,7 @@
 async function apiRequest(endpoint, method="POST", body=null)
 {
 
-    showLoading(true);
+   // showLoading(true);
 
 
     try {
@@ -26,13 +26,13 @@ async function apiRequest(endpoint, method="POST", body=null)
         const data = await response.json();
 
 
-        addConsoleLog(
-            method,
-            endpoint,
-            response.status,
-            body,
-            data
-        );
+        // addConsoleLog(
+        //     method,
+        //     endpoint,
+        //     response.status,
+        //     body,
+        //     data
+        // );
 
 
         if(!response.ok)
@@ -63,7 +63,7 @@ async function apiRequest(endpoint, method="POST", body=null)
     }
     finally
     {
-        showLoading(false);
+        //showLoading(false);
     }
 
 }

@@ -1,234 +1,637 @@
-<!doctype html>
+<!DOCTYPE html>
 <html >
-  <head>
-    <meta charset="UTF-8" />
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>PaymentLab - Stripe Gateway</title>
-
-    <!-- Tailwind -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Gateway Integration Lab - .NET 9 & JS</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
     <!-- Stripe -->
     <script src="https://js.stripe.com/v3/"></script>
 
     <!-- SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- Font Awesome -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-    />
-
-    <!-- Google Font -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Fira+Code:wght@400;600&display=swap"
-      rel="stylesheet"
-    />
-
-    <link rel="stylesheet" href="style.css" />
-  </head>
-
-  <body class="bg-slate-900 text-white">
-    <!-- Loading -->
-
-    <div id="loader" class="loader hidden">
-      <div class="spinner"></div>
-    </div>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- style -->
+    <link rel="stylesheet" href="style.css">
+       
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
 
     <!-- Header -->
-
-    <header class="bg-slate-800 p-5 border-b border-slate-700">
-      <div class="max-w-7xl mx-auto flex justify-between items-center">
-        <div>
-          <h1 class="text-2xl font-bold text-blue-400">
-            <i class="fa-solid fa-credit-card"></i>
-
-            PaymentLab
-          </h1>
-
-          <p class="text-sm text-slate-400">
-            ASP.NET Core Web API + Stripe Integration
-          </p>
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-500/20">
+                    <i class="fa-solid fa-credit-card text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">NET 8 Payment Lab.</h1>
+                    <p class="text-xs text-slate-400">Hosted Checkout, Embedded, و Direct API</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 space-x-reverse bg-slate-900/60 p-1.5 rounded-lg border border-slate-700 text-xs">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-slate-300 font-mono">.NET 8 Web API Ready</span>
+            </div>
         </div>
-
-        <span class="bg-green-500/20 text-green-400 px-3 py-2 rounded">
-          .NET Ready
-        </span>
-      </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-6 space-y-8">
-      <!-- ================= Hosted ================= -->
+    <!-- Navigation Tabs -->
+    <nav class="bg-slate-800/50 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto text-sm gap-2">
+            <button onclick="switchTab('hosted')" id="tab-hosted" class="tab-btn active px-5 py-3.5 flex items-center gap-2 whitespace-nowrap transition-all">
+                <i class="fa-solid fa-globe text-blue-400"></i>
+                <span>1. Hosted Checkout</span>
+            </button>
+            <button onclick="switchTab('embedded')" id="tab-embedded" class="tab-btn px-5 py-3.5 flex items-center gap-2 whitespace-nowrap text-slate-400 transition-all">
+                <i class="fa-solid fa-window-restore text-purple-400"></i>
+                <span>2. Embedded Elements</span>
+            </button>
+            <button onclick="switchTab('direct')" id="tab-direct" class="tab-btn px-5 py-3.5 flex items-center gap-2 whitespace-nowrap text-slate-400 transition-all">
+                <i class="fa-solid fa-bolt text-amber-400"></i>
+                <span>3. Direct API</span>
+            </button>
+            <!-- <button onclick="switchTab('webhook')" id="tab-webhook" class="tab-btn px-5 py-3.5 flex items-center gap-2 whitespace-nowrap text-slate-400 transition-all">
+                <i class="fa-solid fa-shield-halved text-rose-400"></i>
+                <span>5. Webhook</span>
+            </button> -->
+        </div>
+    </nav>
 
-      <section class="card">
-        <h2 class="text-xl font-bold text-blue-400 mb-5">
-          <i class="fa-solid fa-globe"></i>
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
 
-          Hosted Checkout
-        </h2>
+        <!-- ==================== METHOD 1: HOSTED CHECKOUT ==================== -->
+        <div id="view-hosted" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Interactive UI Test -->
+                <div class="lg:col-span-5 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl flex flex-col">
+                    <div class="border-b border-slate-700 pb-4 mb-5 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-blue-400 flex items-center gap-2">
+                                <i class="fa-solid fa-vial"></i> Frontend Test
+                            </h2>
+                            <p class="text-xs text-slate-400">Redirect customers to a secure hosted payment page.</p>
+                        </div>
+                        <span class="text-xs font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-md">Hosted Model</span>
+                    </div>
 
-        <form id="hosted-form" class="space-y-4">
-          <input
-            id="hosted-product"
-            class="bg-slate-900 border border-slate-700 rounded-lg p-4"
-            value="Premium Subscription"
-            placeholder="Product Name"
-          />
+                    <form id="hosted-form" class="space-y-4 flex-grow flex flex-col justify-between">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">ProductName / Service  </label>
+                                <input type="text" id="hosted-product" value="Pro Plan – Annual Subscription" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Price (USD)</label>
+                                    <input type="number" id="hosted-amount" value="120.00" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Email</label>
+                                    <input type="email" value="client@example.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                                </div>
+                            </div>
+                            
+                            <div class="p-3 bg-slate-900/80 border border-slate-700/60 rounded-xl text-xs space-y-2 text-slate-400">
+                                <div class="flex items-center gap-2 text-slate-300 font-semibold">
+                                    <i class="fa-solid fa-circle-info text-blue-400"></i> Payment Process:
+                                </div>
+                                <ol class="list-decimal list-inside space-y-1 pr-1">
+                                    <li>Send a request to the .NET API to create a Checkout Session.</li>
+                                    <li>Receive a unique <code>Checkout URL</code> from the server.</li>
+                                    <li>Redirect the customer immediately to the secure hosted payment page.</li>
+                                </ol>
+                            </div>
+                        </div>
 
-          <input
-            id="hosted-amount"
-            class="bg-slate-900 border border-slate-700 rounded-lg p-4"
-            type="number"
-            value="100"
-            placeholder="Amount"
-          />
+                        <button type="submit" class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span> Hosted Checkout </span>
+                        </button>
+                    </form>
+                </div>
 
-          <button class="bg-blue-600 hover:bg-blue-500 px-5 py-3 rounded-lg">
-            Start Hosted Checkout
-          </button>
-        </form>
-      </section>
+                <!-- Right Column: Code Explanation -->
+                <div class="lg:col-span-7 space-y-4">
+                    <!-- <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-brands fa-js text-yellow-400"></i> 1. Frontend JS
+                            </h3>
+                            <button onclick="copyCode('hosted-js-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> Copy</button>
+                        </div>
+                        <pre id="hosted-js-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>async function startHostedCheckout() {
+    // 1. طلب إنشاء الجلسة من سيرفر .NET
+    const response = await fetch('/api/payments/create-hosted-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            productName: "اشتراك خطة برو سنوية",
+            amount: 120.00
+        })
+    });
 
-      <!-- ================= Embedded ================= -->
+    const data = await response.json();
 
-      <section class="card">
-        <h2 class="text-xl font-bold text-purple-400 mb-5">
-          <i class="fa-solid fa-window-maximize"></i>
+    // 2. التوجيه المباشر لرابط صفحة الدفع الخارجية
+    if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+    }
+}</code></pre>
+                    </div> -->
 
-          Embedded Checkout
-        </h2>
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-server text-emerald-400"></i> 2. Backend Controller (.NET 9)
+                            </h3>
+                            <button onclick="copyCode('hosted-cs-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> Copy</button>
+                        </div>
+                        <pre id="hosted-cs-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code> [HttpPost("hosted-checkout/create-session")]
+ public async &lt;IActionResult&gt; CreateCheckoutSession(CreateHostedCheckoutDto request)
+ {
+     if (request == null)
+         return BadRequest(new
+         {
+             Status = 400,
+             Error = "Invalid request."
+         });
 
-        <form id="embedded-form" class="space-y-4">
-          <input id="embedded-amount" class="bg-slate-900 border border-slate-700 rounded-lg p-4" type="number" value="50" />
+     if (request.Amount <= 0)
+         return BadRequest(new
+         {
+             Status = 400,
+             Error = "Amount must be greater than zero."
+         });
 
-          <button class="bg-purple-600 px-5 py-3 rounded-lg">
-            Create Payment Intent
-          </button>
-        </form>
+     if (string.IsNullOrWhiteSpace(request.ProductName))
+         return BadRequest(new
+         {
+             Status = 400,
+             Error = "Product name is required."
+         });
+     try
+     {
+         var options = new SessionCreateOptions
+         {
+             PaymentMethodTypes = new List&lt;string&gt; { "card" },
+             Mode = "payment",
 
-        <div
-          id="payment-element"
-          class="mt-6 bg-slate-950 p-5 rounded-lg"
-        ></div>
+             LineItems = new List&lt;SessionLineItemOptions&gt;
+             {
+                 new()
+                 {
+                     Quantity = 1,
+                     PriceData = new SessionLineItemPriceDataOptions
+                     {
+                         Currency = "usd",
+                         UnitAmount = (long)(request.Amount * 100),
+                         ProductData = new SessionLineItemPriceDataProductDataOptions
+                         {
+                             Name = request.ProductName
+                         }
+                     }
+                 }
+             },
 
-        <button
-          id="confirm-payment"
-          class="hidden mt-4 bg-green-600 px-5 py-3 rounded-lg"
-        >
-          Confirm Payment
-        </button>
-      </section>
+             SuccessUrl = "http://localhost:5500/success.html?session_id={CHECKOUT_SESSION_ID}",
+             CancelUrl = "http://localhost:5500/cancel.html"
+         };
 
-      <!-- ================= Direct ================= -->
+         var session = await new SessionService().CreateAsync(options);
 
-      <section class="card">
-        <h2 class="text-xl font-bold text-yellow-400 mb-5">
-          <i class="fa-solid fa-bolt"></i>
+         return Ok(new
+         {
+             Status = 200,
+             Message = "Checkout session created successfully.",
+             SessionId = session.Id,
+             RedirectUrl = session.Url
+         });
+     }
+     catch (StripeException ex)
+     {
+         _logger.LogError(ex, ex.Message);
+         return BadRequest(new
+         {
+             Status=400,
+             Error = ex.StripeError?.Message ?? ex.Message
+        
+         });
+     }
+     catch (Exception ex)
+     {
+         _logger.LogError(ex, "Unexpected Error");
 
-          Direct Card Payment
-        </h2>
-
-        <p class="text-red-400 text-sm mb-4">
-          Testing only - Do not use in production
-        </p>
-
-        <form id="direct-form" class="space-y-3">
-         
-          <input id="direct-amount" value="50" placeholder="amount" type="number"
-     class="bg-slate-900 border border-slate-700 rounded-lg p-4">
-        </input>
-
-        <div id="card-element"
-     class="w-full rounded-xl border border-slate-600 bg-slate-800 px-4 py-3 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/30">
-      </div>
-
-          <button class="bg-yellow-600 px-5 py-3 rounded-lg">
-            Charge Card
-          </button>
-        </form>
-      </section>
-
-      <!-- ================= Webhook ================= -->
-
-      <section class="card">
-        <h2 class="text-xl font-bold text-red-400 mb-5">
-          <i class="fa-solid fa-shield"></i>
-
-          Webhook Test
-        </h2>
-
-        <textarea id="webhook-json" rows="8">
-
-          {
-          "type":"checkout.session.completed",
-          "amount":100,
-          "status":"paid"
-         }
-
-         </textarea
-        >
-
-        <button
-          onclick="testWebhook()"
-          class="mt-4 bg-red-600 px-5 py-3 rounded-lg"
-        >
-          Test Webhook
-        </button>
-      </section>
-
-      <!-- ================= Console ================= -->
-
-      <section class="card">
-        <div class="flex justify-between mb-4">
-          <h2 class="text-lg font-bold">API Console</h2>
-
-          <button onclick="clearConsole()" class="text-red-400">Clear</button>
+         return StatusCode(StatusCodes.Status500InternalServerError, new
+         {
+             Status = 500,
+             Error = "An unexpected error occurred."
+         });
+     }
+ }
+</code></pre>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div
-          id="api-console"
-          class="bg-black rounded-lg p-4 h-64 overflow-auto font-mono text-sm"
-        ></div>
-      </section>
+        <!-- ==================== METHOD 2: EMBEDDED ELEMENTS ==================== -->
+        <div id="view-embedded" class="tab-content space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Interactive UI Test -->
+                <div class="lg:col-span-5 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl flex flex-col">
+                    <div class="border-b border-slate-700 pb-4 mb-5 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-purple-400 flex items-center gap-2">
+                                <i class="fa-solid fa-credit-card"></i> iFrame
+                            </h2>
+                            <p class="text-xs text-slate-400"> Collect payments on your website using secure, PCI-compliant encrypted payment fields.</p>
+                        </div>
+                        <span class="text-xs font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2.5 py-1 rounded-md">Embedded</span>
+                    </div>
 
-      <!-- ================= History ================= -->
+                    <form id="embedded-form"  class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1"> Charge Amount($)</label>
+                            <input type="number" id="embedded-amount" value="85.50" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500">
+                        </div>
 
-      <section class="card">
-        <h2 class="text-xl font-bold mb-5">Payment History</h2>
+                        <button id="create-payment"  class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-purple-600/25 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-shield-cat"></i>
+                            <span> Create Payment Intent</span>
+                        </button>
+                    </form>
+                    <!-- Simulated Stripe/Tap iFrame Container -->
+                    <div id="payment-element" class="p-4 bg-slate-950 border border-slate-700 rounded-xl space-y-3">
+                            
+                    </div>
+                     <button id="confirm-payment"  class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-purple-600/25 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-shield-cat"></i>
+                            <span> Confirm Payment</span>
+                     </button>
+                </div>
 
-        <div class="overflow-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="text-slate-400 border-b border-slate-700">
-                <th class="p-3">Type</th>
+                <!-- Right Column: Code Explanation -->
+                <div class="lg:col-span-7 space-y-4">
+                    <!-- <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-brands fa-js text-yellow-400"></i> كود الجانب الأمامي (JS SDK Integration)
+                            </h3>
+                            <button onclick="copyCode('embedded-js-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> نسخ</button>
+                        </div>
+                        <pre id="embedded-js-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>// 1. طلب ClientSecret من .NET API
+const res = await fetch('/api/payments/create-intent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: 85.50 })
+});
+const { clientSecret } = await res.json();
 
-                <th class="p-3">Amount</th>
+// 2. تضمين حقول الدفع الآمنة في الصفحة
+const stripe = Stripe('YOUR_PUBLISHABLE_KEY');
+const elements = stripe.elements({ clientSecret });
+const paymentElement = elements.create('payment');
+paymentElement.mount('#payment-element-container');
 
-                <th class="p-3">Status</th>
+// 3. تأكيد الدفع دون أن تلمس بيانات البطاقة سيرفرك
+const { error } = await stripe.confirmPayment({
+    elements,
+    confirmParams: { return_url: 'https://yourdomain.com/success' }
+});</code></pre>
+                    </div> -->
 
-                <th class="p-3">ID</th>
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-server text-emerald-400"></i> NET 9 PaymentIntent API.
+                            </h3>
+                            <button onclick="copyCode('embedded-cs-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> Copy</button>
+                        </div>
+                        <pre id="embedded-cs-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>[HttpPost("embedded-checkout/create-payment-intent")]
+public async Task&lt;IActionResult&gt; CreatePaymentIntent(CreatePaymentIntentDto request)
+{
+    if (request == null)
+    {
+        return BadRequest(new
+        {
+            Status = 400,
+            Error = "Invalid request."
+        });
+    }
 
-                <th class="p-3">Date</th>
-              </tr>
-            </thead>
+    if (request.Amount <= 0)
+    {
+        return BadRequest(new
+        {
+            Status = 400,
+            Error = "Amount must be greater than zero."
+        });
+    }
+    try
+    {
+        var options = new PaymentIntentCreateOptions
+        {
+            Amount = (long)(request.Amount * 100),
+            Currency = "usd",
 
-            <tbody id="payment-history"></tbody>
-          </table>
+            AutomaticPaymentMethods =
+                new PaymentIntentAutomaticPaymentMethodsOptions
+                {
+                    Enabled = true
+                }
+        };
+
+        var paymentIntent =
+            await new PaymentIntentService().CreateAsync(options);
+
+        return Ok(new
+        {
+            Status = 200,
+            Message = "Payment Intent created successfully.",
+            PaymentIntentId = paymentIntent.Id,
+            ClientSecret = paymentIntent.ClientSecret
+        });
+    }
+    catch (StripeException ex)
+    {
+        _logger.LogError(ex, ex.Message);
+        return BadRequest(new
+        {
+            Status = 400,
+            Error = ex.StripeError?.Message ?? ex.Message
+        });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Unexpected Error");
+
+        return StatusCode(StatusCodes.Status500InternalServerError, new
+        {
+            Status = 500,
+            Error = "An unexpected error occurred."
+        });
+    }
+}
+</code></pre>
+                    </div>
+                </div>
+            </div>
         </div>
-      </section>
+
+        <!-- ==================== METHOD 3: DIRECT API ==================== -->
+        <div id="view-direct" class="tab-content space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Interactive UI Test -->
+                <div class="lg:col-span-5 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl flex flex-col">
+                    <div class="border-b border-slate-700 pb-4 mb-4 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                                <i class="fa-solid fa-bolt"></i> Direct API
+                            </h2>
+                            <p class="text-xs text-slate-400"> Send payment card information directly to your server.</p>
+                        </div>
+                        <span class="text-xs font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-md">PCI-DSS High Risk</span>
+                    </div>
+
+                    <!-- Warning Box -->
+                    <div class="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-start gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 text-sm"></i>
+                        <div>
+                         <strong>Important Security Notice:</strong> This integration requires <b>PCI DSS Level 1</b> compliance because your server directly handles customers' card data before it is processed by the payment gateway.
+                        </div>
+                    </div>
+
+                    <form id="direct-form"  class="space-y-3">
+                        
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1"> Amount ($)</label>
+                            <input type="number" id="direct-amount" value="49.99" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div id="card-element"
+                           class="rounded-xl border border-slate-700 bg-slate-800 px-4 py-4 transition-all duration-300 focus-within:border-blue-500">
+                        </div>
+
+                        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-amber-600/25 flex items-center justify-center gap-2 mt-2">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span> Charge Card </span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right Column: Code Explanation -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-server text-emerald-400"></i>.NET9 Direct Charge API
+                            </h3>
+                            <button onclick="copyCode('direct-cs-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> نسخ</button>
+                        </div>
+                        <pre id="direct-cs-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>[HttpPost("direct-checkout/charge-card")]
+public async Task&Lt;IActionResult&gt; ChargeCard([FromBody] DirectCardPaymentDto request)
+{
+    if (request == null)
+    {
+        return BadRequest(new
+        {
+            Status = 400,
+            Error = "Invalid request."
+        });
+    }
+
+    if (request.Amount <= 0)
+    {
+        return BadRequest(new
+        {
+            Status = 400,
+            Error = "Amount must be greater than zero."
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.PaymentMethodId))
+    {
+        return BadRequest(new
+        {
+            Status = 400,
+            Error = "PaymentMethodId is required."
+        });
+    }
+
+
+    try
+    {
+        var options = new PaymentIntentCreateOptions
+        {
+            Amount = Convert.ToInt64(request.Amount * 100),
+            Currency = "usd",
+
+            PaymentMethod = request.PaymentMethodId,
+
+            Confirm = true,
+
+            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+            {
+                Enabled = true,
+                AllowRedirects = "never"
+            }
+        };
+
+
+        var service = new PaymentIntentService();
+
+        var intent = await service.CreateAsync(options);
+
+
+        return Ok(new
+        {
+            Status = 200,
+            Message = "Payment completed successfully.",
+            PaymentIntentId = intent.Id,
+            PaymentStatus = intent.Status
+        });
+    }
+    catch (StripeException ex)
+    {
+        _logger.LogError(ex, "Stripe Error");
+
+        return BadRequest(new
+        {
+            Status = 400,
+            Error = ex.StripeError?.Message ?? ex.Message
+        });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Unexpected Error");
+
+        return StatusCode(500, new
+        {
+            Status = 500,
+            Error = "An unexpected error occurred."
+        });
+    }
+}
+</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 5: WEBHOOK SECURITY ==================== -->
+        <div id="view-webhook" class="tab-content space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Webhook Security Simulator -->
+                <div class="lg:col-span-6 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-lg font-bold text-rose-400 flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-shield-halved"></i> أداة اختبـار Webhook HMAC Signature
+                    </h2>
+                    <p class="text-xs text-slate-400 mb-4">جرب توليد وفحص الـ HMAC SHA-256 Signature المعتمد لتأمين إشعارات الدفع</p>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Webhook Secret Key</label>
+                            <input type="text" id="wh-secret" value="whsec_test_secret_key_12345" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Payload (JSON Event Body)</label>
+                            <textarea id="wh-payload" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200">{
+  "type": "checkout.session.completed",
+  "data": {
+    "orderId": "ORD-99823",
+    "amount_total": 12000,
+    "payment_status": "paid"
+  }
+}</textarea>
+                        </div>
+
+                        <button onclick="simulateWebhookCheck()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl transition-all shadow-lg shadow-rose-600/25 flex items-center justify-center gap-2 text-sm">
+                            <i class="fa-solid fa-key"></i>
+                            <span>توليد والتحقق من الـ Hash Signature</span>
+                        </button>
+
+                        <div id="wh-result" class="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs font-mono hidden">
+                            <div class="text-slate-400">Calculated HMAC-SHA256:</div>
+                            <div id="wh-computed-hash" class="text-emerald-400 break-all bg-slate-900 p-2 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Backend Webhook Code -->
+                <div class="lg:col-span-6 space-y-4">
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-code"></i> كود الـ Webhook Controller الآمن (.NET 8)
+                            </h3>
+                            <button onclick="copyCode('webhook-cs-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> نسخ</button>
+                        </div>
+                        <pre id="webhook-cs-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>[HttpPost("webhook")]
+public async Task&lt;IActionResult&gt; StripeWebhook()
+{
+    var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+    var stripeSignature = Request.Headers["Stripe-Signature"];
+    var webhookSecret = _config["Stripe:WebhookSecret"];
+
+    try
+    {
+        // 1. التحقق التلقائي من التوقيع والوقت لمنع التزوير Replay Attacks
+        var stripeEvent = EventUtility.ConstructEvent(json, stripeSignature, webhookSecret);
+
+        // 2. معالجة الحدث الموثوق
+        if (stripeEvent.Type == Events.CheckoutSessionCompleted)
+        {
+            var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
+            
+            // تحديث حالة الطلب في قاعدة البيانات إلى مدفوع
+            await UpdateOrderStatus(session.Id, OrderStatus.Paid);
+        }
+
+        return Ok();
+    }
+    catch (StripeException ex)
+    {
+        return BadRequest(new { error = ex.Message });
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Console Terminal -->
+        <div class="mt-8 bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                    <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                    <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                    <span class="text-xs font-mono font-bold text-slate-400 ml-2">API Console & Network Activity Inspector</span>
+                </div>
+                <button onclick="clearConsole()" class="text-xs text-slate-500 hover:text-slate-300"><i class="fa-solid fa-trash-can"></i> Clear</button>
+            </div>
+
+            <div id="api-console" class="font-mono text-xs space-y-2 h-40 overflow-y-auto pr-2 text-slate-300">
+                <div class="text-slate-500">// The system is ready for testing. Select a payment method and click the Pay button to test the payment flow. </div>
+            </div>
+        </div>
+
     </main>
 
-    <footer class="text-center p-5 text-slate-400">PaymentLab © 2026</footer>
+    <!-- Footer -->
+    <footer class="bg-slate-800/80 border-t border-slate-700 py-4 text-center text-xs text-slate-400 mt-auto">
+        .NET 9 Payment Gateway Integration Mini-Project & Interactive Lab
+    </footer>
 
-    <!-- Scripts -->
-
+    <!-- Application Script Logic -->
     <script src="config.js"></script>
 
     <script src="api.js"></script>
-
     <script src="app.js"></script>
-  </body>
+</body>
 </html>

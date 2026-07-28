@@ -5,20 +5,31 @@ body
 
 
 code,
-pre
+pre,
+.font-mono
 {
     font-family:
     'Fira Code',
     monospace;
 }
 
-
+#payment-element {
+    padding: 16px;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    background: #0f172a;
+    margin: 16px 0;
+}
 
 ::-webkit-scrollbar
 {
     width:8px;
+    height: 8px;
 }
-
+::-webkit-scrollbar-track 
+{ 
+    background: #1e293b;
+}
 
 ::-webkit-scrollbar-thumb
 {
@@ -119,4 +130,24 @@ textarea
     padding:10px;
 
     width:100%;
+}
+#card-element {
+    padding: 14px 16px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    transition: all .3s ease;
+}
+
+#card-element.StripeElement--focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.2);
+}
+
+#card-element.StripeElement--invalid {
+    border-color: #ef4444;
+}
+
+#card-element.StripeElement--complete {
+    border-color: #22c55e;
 }
