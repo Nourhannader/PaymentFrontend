@@ -71,6 +71,52 @@ function switchTab(tabId) {
   activeBtn.classList.remove("text-slate-400");
 }
 
+function savePayment(payment) {
+    payment.date ??= new Date().toLocaleString();
+    paymentHistory.push(payment);
+    localStorage.setItem("paymentsHistory", JSON.stringify(paymentHistory));
+
+    logConsole();
+}
+
+function logConsole() {
+  paymentHistory = JSON.parse(localStorage.getItem("paymentsHistory")) || [];
+  const consoleEl = document.getElementById("api-console");
+  consoleEl.innerHTML = "";
+  
+  paymentHistory.slice().reverse().forEach(p => {
+    const logEntry = document.createElement("div");
+    logEntry.className =
+    "p-2 rounded bg-slate-900 border border-slate-800 space-y-1 animate-fadeIn";
+  const statusColor =
+    p.status >= 200 && p.status < 300 ? "text-emerald-400" : "text-rose-400";
+  
+  const statusCode=
+      p.status >= 200 && p.status < 300 ? "OK" :"BadRequest";
+
+  logEntry.innerHTML = `
+                <div class="flex justify-between items-center text-[11px]">
+                    <span class="text-slate-400">[${p.date}] <strong class="text-blue-400">${p.method}</strong> ${p.url}</span>
+                    <span class="font-bold ${statusColor}">HTTP ${p.status} ${statusCode}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[10px]">
+                    <div><span class="text-slate-500">Payload:</span> <code class="text-amber-300">${JSON.stringify(p.payload)}</code></div>
+                    <div><span class="text-slate-500">Response:</span> <code class="text-purple-300">${JSON.stringify(p.response)}</code></div>
+                </div>
+            `;
+
+  consoleEl.prepend(logEntry);
+  })
+}
+
+function clearConsole() {
+  paymentHistory = [];
+  localStorage.removeItem("paymentsHistory");
+  document.getElementById("api-console").innerHTML =
+    '<div class="text-slate-500">// History is Removed ....</div>';
+}
+
+
 
 // ===============================
 // Hosted Checkout
@@ -82,7 +128,7 @@ async function runHostedCheckout(e) {
   const amount = parseFloat(document.getElementById("hosted-amount").value);
   let data={productName,amount};
 
-  const ResponseData=await apiRequest(CONFIG.ENDPOINTS.HOSTED_CHECKOUT,"Post",data);
+  const ResponseData=await apiRequest(CONFIG.ENDPOINTS.HOSTED_CHECKOUT,"POST",data);
   
    const response =
     ResponseData.status >= 200 && ResponseData.status < 300
@@ -97,13 +143,13 @@ async function runHostedCheckout(e) {
  savePayment({
         method: "POST",
         url: CONFIG.API_BASE_URL + CONFIG.ENDPOINTS.HOSTED_CHECKOUT,
-        status: response.status,
+        status: ResponseData.status,
         payload: data,
         response: response
     });
 
  if (data.redirectUrl) {
-    window.location.href = data.redirectUrl;
+    window.location.href = response.redirectUrl;
   }
 }
 
@@ -129,7 +175,7 @@ async function runEmbeddedCheckout(e) {
 
   document.getElementById("confirm-payment").classList.remove("hidden");
 
-  window.currentClientSecret = data.clientSecret;
+  window.currentClientSecret = ResponseData.clientSecret;
   const response=
        ResponseData.status >= 200 && ResponseData.status < 300
         ? {
@@ -143,7 +189,7 @@ async function runEmbeddedCheckout(e) {
   paymentEmbedded={
         method: "POST",
         url: CONFIG.API_BASE_URL + CONFIG.ENDPOINTS.PAYMENT_INTENT,
-        status: response.status,
+        status: ResponseData.status,
         payload: data,
         response: response
     };
@@ -186,7 +232,7 @@ async function confirmEmbeddedPayment() {
     timerProgressBar: true
   });
  }
-  savaPayment(paymentEmbedded)
+  savePayment(paymentEmbedded)
 }
 
 
@@ -308,7 +354,7 @@ async function runDirectCheckout(e) {
 savePayment({
         method: "POST",
         url: CONFIG.API_BASE_URL + CONFIG.ENDPOINTS.DIRECT_PAYMENT,
-        status: response.status,
+        status: ResponseData.status,
         payload: data,
         response: response
     });
@@ -342,13 +388,17 @@ async function simulateWebhookCheck() {
     `t=${Math.floor(Date.now() / 1000)},v1=${hexHash}`;
   document.getElementById("wh-result").classList.remove("hidden");
 
-  logConsole(
-    "POST",
-    "/api/payments/webhook",
-    200,
-    { "Stripe-Signature": hexHash },
-    { received: true },
-  );
+ savePayment({
+    method: "POST",
+    url: "/api/payments/webhook",
+    status: 200,
+    payload: {
+        signature: hexHash
+    },
+    response: {
+        received: true
+    }
+  });
 }
 
 //==========================
@@ -362,53 +412,14 @@ function copyCode(elementId) {
     position: "top-end",
     icon: "success",
     title: "Code copied successfully!",
+    background: "#0f172a",
+    color: "#fff",
     showConfirmButton: false,
-    timer: 1500,
+    timer: 2000,
+    timerProgressBar: true
   });
 }
 
-
-function savaPayment(payment) {
-    payment.date = new Date().toLocaleString();
-    paymentHistory.push(payment);
-    localStorage.setItem("paymentsHistory", JSON.stringify(paymentHistory));
-
-    logConsole();
-}
-
-
-function logConsole() {
-  paymentHistory = JSON.parse(localStorage.getItem("paymentsHistory")) || [];
-  const consoleEl = document.getElementById("api-console");
-  const logEntry = document.createElement("div");
-  logEntry.className =
-    "p-2 rounded bg-slate-900 border border-slate-800 space-y-1 animate-fadeIn";
-  [...paymentHistory].reverse().forEach((p) => {
-  const statusColor =
-    p.status >= 200 && p.status < 300 ? "text-emerald-400" : "text-rose-400";
-  
-  const statusCode=
-      p.status >= 200 && p.status < 300 ? "OK" :"BadRequest";
-
-  logEntry.innerHTML = `
-                <div class="flex justify-between items-center text-[11px]">
-                    <span class="text-slate-400">[${p.date}] <strong class="text-blue-400">${p.method}</strong> ${p.url}</span>
-                    <span class="font-bold ${statusColor}">HTTP ${p.status} ${statusCode}</span>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-[10px]">
-                    <div><span class="text-slate-500">Payload:</span> <code class="text-amber-300">${JSON.stringify(p.payload)}</code></div>
-                    <div><span class="text-slate-500">Response:</span> <code class="text-purple-300">${JSON.stringify(p.response)}</code></div>
-                </div>
-            `;
-
-  consoleEl.prepend(logEntry);
-  })
-}
-
-function clearConsole() {
-  document.getElementById("api-console").innerHTML =
-    '<div class="text-slate-500">// تم مسح السجل...</div>';
-}
 
 
 // ===============================
@@ -417,7 +428,7 @@ function clearConsole() {
 
 document.addEventListener("DOMContentLoaded", () => {
    logConsole()
-  //initializeDirectPaymentCard();
+   initializeDirectPaymentCard();
 
   document
     .getElementById("hosted-form")

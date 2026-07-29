@@ -431,7 +431,7 @@ public async Task&lt;IActionResult&gt; CreatePaymentIntent(CreatePaymentIntentDt
                             <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
                                 <i class="fa-solid fa-server text-emerald-400"></i>.NET9 Direct Charge API
                             </h3>
-                            <button onclick="copyCode('direct-cs-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> نسخ</button>
+                            <button onclick="copyCode('direct-cs-code')" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-regular fa-copy"></i> Copy </button>
                         </div>
                         <pre id="direct-cs-code" class="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 overflow-x-auto border border-slate-800"><code>[HttpPost("direct-checkout/charge-card")]
 public async Task&Lt;IActionResult&gt; ChargeCard([FromBody] DirectCardPaymentDto request)
